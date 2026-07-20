@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Transactions — Fake PAX Terminal{% endblock %}
+
+{% block content %}
+
+{# ── Summary bar ────────────────────────────────────────────────────────────── #}
+<div class="d-flex flex-wrap gap-2 mb-3 align-items-center">
+  <span class="fw-semibold fs-5">All transactions</span>
+  <span class="badge bg-secondary ms-1">{{ stats.total }} total</span>
+  <span class="badge bg-success">{{ stats.approved }} approved</span>
+  <span class="badge bg-danger">{{ stats.declined }} declined</span>
+  {% if stats.cancelled %}
+  <span class="badge bg-warning text-dark">{{ stats.cancelled }} cancelled</span>
+  {% endif %}
+  <div class="ms-auto d-flex gap-2">
+    <select id="filter-status" class="form-select form-select-sm" style="width:auto;background:#1e293b;color:#e2e8f0;border-color:#334155;">
+      <option value="">All statuses</option>
+      <option value="APPROVED">Approved</option>
+      <option value="DECLINED">Declined</option>
+      <option value="CANCELLED">Cancelled</option>
+      <option value="OK">OK</option>
+    </select>
+    <button class="btn btn-sm btn-outline-secondary" onclick="location.reload()">&#8635; Refresh</button>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-striped table-hover mb-0" id="txn-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Timestamp</th>
+            <th>Command</th>
+            <th>Type</th>
+            <th class="text-end">Amount (cents)</th>
+            <th>Order ID</th>
+            <th>Status</th>
+            <th>Delay</th>
+            <th>Auth Code</th>
+            <th>TXN ID</th>
+            <th>Ref</th>
+            <th>Error</th>
+          </tr>
+        </thead>
+        <tbody id="txn-tbody">
+          {% for t in transactions %}
+          <tr data-status="{{ t.status }}">
+            <td class="text-muted mono">{{ t.seq }}</td>
+            <td class="mono small">{{ t.ts }}</td>
+            <td class="mono fw-semibold">{{ t.command }}</td>
+            <td>{{ t.type }}</td>
+            <td class="text-end mono">{{ t.amount }}</td>
+            <td class="mono small text-muted">{{ t.order_id or '—' }}</td>
+            <td>
+              <span class="badge badge-{{ t.status }}">{{ t.status }}</span>
+            </td>
+            <td class="text-muted small mono">
+              {% if t.delay_s > 0 %}+{{ t.delay_s }}s{% else %}—{% endif %}
+            </td>
+            <td class="mono small">{{ t.auth_code or '—' }}</td>
+            <td class="mono small text-muted">{{ t.txn_id or '—' }}</td>
+            <td class="mono small text-muted">{{ t.ref or '—' }}</td>
+            <td class="small text-danger">{{ t.error_msg or '' }}</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="12" class="text-center text-muted py-5">
+              No transactions yet. Send a payment request from Odoo POS.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('filter-status').addEventListener('change', function () {
+  const val = this.value;
+  document.querySelectorAll('#txn-tbody tr[data-status]').forEach(row => {
+    row.style.display = (!val || row.dataset.status === val) ? '' : 'none';
+  });
+});
+</script>
+{% endblock %}

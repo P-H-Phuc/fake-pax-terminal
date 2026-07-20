@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — Fake PAX Terminal{% endblock %}
+
+{% block content %}
+
+{# ── Stats row ──────────────────────────────────────────────────────────────── #}
+<div class="row g-3 mb-4" id="stats-row">
+  <div class="col-6 col-md-3">
+    <div class="card stat-card total p-3">
+      <div class="text-muted small">Total requests</div>
+      <div class="fs-3 fw-bold" id="stat-total">{{ stats.total }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card stat-card approved p-3">
+      <div class="text-muted small">Approved</div>
+      <div class="fs-3 fw-bold text-success" id="stat-approved">{{ stats.approved }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card stat-card declined p-3">
+      <div class="text-muted small">Declined</div>
+      <div class="fs-3 fw-bold text-danger" id="stat-declined">{{ stats.declined }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card stat-card other p-3">
+      <div class="text-muted small">Cancelled / Other</div>
+      <div class="fs-3 fw-bold text-warning" id="stat-other">{{ stats.cancelled + stats.other }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+
+  {# ── Recent transactions ────────────────────────────────────────────────── #}
+  <div class="col-lg-8">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center py-2">
+        <span class="fw-semibold">Recent transactions</span>
+        <span class="text-muted small" id="last-updated"></span>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-striped table-hover mb-0">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Time</th>
+                <th>Command</th>
+                <th>Type</th>
+                <th class="text-end">Amount (cents)</th>
+                <th>Order</th>
+                <th>Status</th>
+                <th>Auth / TXN</th>
+              </tr>
+            </thead>
+            <tbody id="txn-tbody">
+              {% for t in transactions %}
+              <tr>
+                <td class="text-muted mono">{{ t.seq }}</td>
+                <td class="mono text-muted small">{{ t.ts[11:] }}</td>
+                <td class="mono fw-semibold">{{ t.command }}</td>
+                <td>{{ t.type }}</td>
+                <td class="text-end mono">{{ t.amount }}</td>
+                <td class="mono small text-muted">{{ t.order_id or '—' }}</td>
+                <td>
+                  <span class="badge badge-{{ t.status }}">{{ t.status }}</span>
+                  {% if t.delay_s > 0 %}
+                    <span class="text-muted small">+{{ t.delay_s }}s</span>
+                  {% endif %}
+                </td>
+                <td class="mono small text-muted">
+                  {{ t.auth_code or '' }}{% if t.auth_code and t.txn_id %} / {% endif %}{{ t.txn_id or t.error_msg or '' }}
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="8" class="text-center text-muted py-4">No transactions yet. Send a request from Odoo POS.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card-footer text-muted small py-2">
+        Showing last 20 &mdash; <a href="/transactions" class="text-muted">view all</a>
+        &nbsp;|&nbsp; auto-refreshing every 4s
+      </div>
+    </div>
+  </div>
+
+  {# ── Server info ────────────────────────────────────────────────────────── #}
+  <div class="col-lg-4">
+    <div class="card mb-3">
+      <div class="card-header py-2 fw-semibold">Server info</div>
+      <div class="card-body">
+        <dl class="row mb-0 small">
+          <dt class="col-5 text-muted">PAX port</dt>
+          <dd class="col-7 mono">{{ config.pax_port }}</dd>
+
+          <dt class="col-5 text-muted">Dashboard port</dt>
+          <dd class="col-7 mono">{{ config.ui_port }}</dd>
+
+          <dt class="col-5 text-muted">Mode</dt>
+          <dd class="col-7 mono">{{ config.mode }}</dd>
+
+          <dt class="col-5 text-muted">Extra delay</dt>
+          <dd class="col-7 mono">{{ config.delay }}s</dd>
+
+          <dt class="col-5 text-muted">Started</dt>
+          <dd class="col-7 mono">{{ config.started[11:] }}</dd>
+
+          <dt class="col-5 text-muted">Log file</dt>
+          <dd class="col-7 mono text-truncate" title="{{ config.log_file }}">{{ config.log_file.split('/')[-1] }}</dd>
+        </dl>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header py-2 fw-semibold">Amount rules (approve mode)</div>
+      <div class="card-body small">
+        <table class="table table-sm mb-0">
+          <tbody>
+            <tr>
+              <td class="text-muted">&lt; 5 000 cents</td>
+              <td><span class="badge bg-danger">DECLINED</span></td>
+            </tr>
+            <tr>
+              <td class="text-muted">5 000 – 50 000</td>
+              <td><span class="badge bg-success">APPROVED</span> instantly</td>
+            </tr>
+            <tr>
+              <td class="text-muted">&gt; 50 000 cents</td>
+              <td><span class="badge bg-primary">APPROVED</span> after 5s</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="mt-2 mb-0" style="color:#475569;">
+          Configure Odoo: IP <code>127.0.0.1</code>, Port <code>{{ config.pax_port }}</code>
+        </p>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const statusClass = {
+  APPROVED: 'bg-success',
+  DECLINED: 'bg-danger',
+  CANCELLED: 'bg-warning text-dark',
+  OK: 'bg-primary',
+};
+
+function badge(status) {
+  const cls = statusClass[status] || 'bg-secondary';
+  return `<span class="badge ${cls}">${status}</span>`;
+}
+
+async function refresh() {
+  try {
+    const [statsRes, txnRes] = await Promise.all([
+      fetch('/api/stats'),
+      fetch('/api/transactions'),
+    ]);
+    const stats = await statsRes.json();
+    const txns  = await txnRes.json();
+
+    document.getElementById('stat-total').textContent    = stats.total;
+    document.getElementById('stat-approved').textContent = stats.approved;
+    document.getElementById('stat-declined').textContent = stats.declined;
+    document.getElementById('stat-other').textContent    = stats.cancelled + stats.other;
+
+    const rows = txns.slice(0, 20).map(t => `
+      <tr>
+        <td class="text-muted mono">${t.seq}</td>
+        <td class="mono text-muted small">${(t.ts || '').slice(11)}</td>
+        <td class="mono fw-semibold">${t.command}</td>
+        <td>${t.type}</td>
+        <td class="text-end mono">${t.amount}</td>
+        <td class="mono small text-muted">${t.order_id || '—'}</td>
+        <td>
+          ${badge(t.status)}
+          ${t.delay_s > 0 ? `<span class="text-muted small">+${t.delay_s}s</span>` : ''}
+        </td>
+        <td class="mono small text-muted">
+          ${t.auth_code || ''}${t.auth_code && t.txn_id ? ' / ' : ''}${t.txn_id || t.error_msg || ''}
+        </td>
+      </tr>
+    `).join('');
+
+    document.getElementById('txn-tbody').innerHTML = rows ||
+      '<tr><td colspan="8" class="text-center text-muted py-4">No transactions yet.</td></tr>';
+
+    document.getElementById('last-updated').textContent =
+      'updated ' + new Date().toLocaleTimeString();
+
+  } catch (e) { /* server may be restarting */ }
+}
+
+setInterval(refresh, 4000);
+</script>
+{% endblock %}

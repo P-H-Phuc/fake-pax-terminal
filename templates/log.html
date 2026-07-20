@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Log — Fake PAX Terminal{% endblock %}
+
+{% block head %}
+<meta http-equiv="refresh" content="10">
+{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <span class="fw-semibold fs-5">Server log</span>
+    <span class="text-muted small ms-2">{{ log_file }}</span>
+  </div>
+  <div class="d-flex gap-2 align-items-center">
+    <span class="text-muted small">last {{ lines|length }} lines &mdash; auto-refresh 10s</span>
+    <button class="btn btn-sm btn-outline-secondary" onclick="location.reload()">&#8635; Refresh now</button>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body p-2">
+    <pre class="log-block mb-0" id="log-pre">{% if lines %}{% for line in lines %}{{ line | e }}{% endfor %}{% else %}Log file is empty or not yet created.{% endif %}</pre>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// scroll to bottom on load
+const pre = document.getElementById('log-pre');
+if (pre) pre.scrollTop = pre.scrollHeight;
+</script>
+{% endblock %}
